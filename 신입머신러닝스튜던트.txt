@@ -228,8 +228,67 @@ plt.show()
 이렇게하면 육안으로도 공감/이해할 수있는 이웃들이 다이아몬드로 마크된다. 
 이렇게 스케일을 맞춰주는 작업을 전처리 작업이라고한다. tree에서는 할 필요가 없다고한다.
 
+7. 회귀(regression)에는 target값을 맞출 필요가없다.예측값이기때문에 이미있는 값(위에서 target [1,0])이아니라 새로운값을 예측하기때문에. 
+왜 회귀라고 부르냐면 콜턴이라는 애가 19세기에 키 큰 부모의 자식이 그정도로 키가 크기않고 동년배 평균값의 키로 회귀하드라 라고 예측을 한 논문에서 regression이라는 단어가 굳어졌다...
+
+위의 방식 (최근접분류)과 회귀가 다른것은 최근접분류는 가까운 이웃이 ㅁ,ㅁ,ㅅ이면 타겟의 값은 ㅁ으로 분류하는거고
+최근접회귀는  만약 가까운이웃이 10 20 30 이라는 값을 가지고 있다면 [10+20+30]/ 3 = 20 의 값으로 예측하는거다. 
+
+8. 회귀문제에선 stratify 가 필요없다.
+#we don't need stratify for regression.
+train_input, test_input, train_target, test_target = train_test_split(
+    perch_length, perch_weight, random_state= 20
+)
+이러면 perch_length를 train과 test input이 나눠먹고, perch_weight를 train과 test target이 나눠먹어.
+
+이러면 모양이 [ [v1,v2] , [v3,v4], .....]이런모양이나오기때문에, 
+[
+[v1,v2],
+[v3,v4]
+...
+]
+이렇게 하고싶다면 reshape를 써라.
+
+train_input = np.array(train_input).reshape(-1,1)
+test_input = np.array(test_input).reshape(-1,1)
+
+reshape( 줄 갯수,1 set당 원소의 갯수)
+줄 갯수가 -1일경우, 알아서 해라라는뜻? 
+
+from sklearn.neighbors import KNeighborsRegressor
+
+knr = KNeighborsRegressor()
+knr.fit(train_input, train_target)
+
+knr.score(test_input, test_target)
+이걸로 정확도 테스트를 할 수 있는데, 그 공식은 R^2 = 1 - (sum of (target-input)^2 )/(sum of(target-mean)^2) 라고한다. 식을보면, 분수중 위의 target-input값이 0이면, 뺄셈의 값이 1이기때문에 매우 정확하게 된다는걸 알수 있고, 분자와 분모의 값이 같아질수록 뺄셈의 값이 0이기때문에 정확도가 떨어진다는것을 알수 있다. 다시말하면 예측값이 평균과 같아질수록 정확도는 떨어진다..?ㄷㄷ
+
+9. 오차
+아래코드는 오차값을 나타내준다.
+from sklearn.metrics import mean_absolute_error
+test_prediction = knr.predict(test_input)
+mae = mean_absolute_error(test_target, test_prediction)
+
+결과)
+[[33.5]  print(test_input)
+ [32. ]
+ [31. ]
+ [29. ]
+ [26.3]]
+[675.0, 615.0, 600.0, 450.0, 450.0]  print(test_target)
+[649.   602.   550.   493.   471.06] print(test_prediction)
+30.612000000000013 print(mae)
 
 
+예제들에서 input = 길이 target=무게 였던것을 상기하자.
 
+코드를보면 test_prediction은 test_input (length)값에 기초해서 weight를 예측한다. 그것이 실제 target (weight)값과 비교했을때 오차가 좀 있는데, 그것이 mae이다. 
 
- 
+10. 과대적합/ 과소적합
+print("train score:",knr.score(train_input, train_target) , "\ntest score",knr.score(test_input, test_target))
+과소적합 (underfitting): train score < test score. 연습할때보다 실제시험에서 더 잘맞춤
+과대적합 (overfitting): train score > test score.  연습할땐 잘했는데 실제시험 조짐
+
+해소법은 knr.n_neighbors를 조절하면된다. 기본값이 5인데, 그것보다 높으면 과소적합, 낮으면 과대적합 
+k가 높아질수록 train때보다 test값이 커진다. 
+k가 낮아질수록 train때보다 test값이 작아진다.
