@@ -29,7 +29,7 @@ length = bream_length + smelt_length
 weight = bream_weight+ smelt_weight
 fish_data = np.column_stack((length, weight))
 
-# fish_target is like an answer sheet 
+# fish_target is like an answer sheet
 # fish_target = [1]*len(bream_length) + [0]*len(smelt_length)
 fish_target = np.concatenate((np.ones(len(bream_length)), np.zeros(len(smelt_length))))
 
@@ -49,6 +49,7 @@ train_input, test_input, train_target, test_target = train_test_split(
     fish_data, fish_target, stratify= fish_target, random_state=len(fish_data))
 
 # well mixed dataset
+
 kn = KNeighborsClassifier()
 kn = kn.fit(train_input, train_target)
 
@@ -56,7 +57,7 @@ kn.score(test_input, test_target)
 #this test returns array[0] which means it is smelt.
 print(kn.predict([[25,150]]))
 
-#returns distance from point to its neighbors and indexes of neighbors based on Kn_neighbors 
+#returns distance from point to its neighbors and indexes of neighbors based on Kn_neighbors
 distances, indexes = kn.kneighbors([[25,150]])
 # print(distances) index is generated based on the graph.
 # print(indexes)
@@ -65,7 +66,7 @@ plt.scatter(train_input[:,0], train_input[:, 1])
 # mark triangle on input point
 plt.scatter(25,150, marker= '^')
 
-# mark diamond on points close to input point 
+# mark diamond on points close to input point
 plt.scatter(train_input[indexes,0], train_input[indexes,1], marker='D')
 
 # plt.xlim(0,700)
@@ -93,7 +94,7 @@ distances, indexes = kn.kneighbors([new])
 plt.scatter(train_scaled[:,0], train_scaled[:, 1])
 # mark triangle on input point
 plt.scatter(new[0], new[1], marker = '^')
-# mark diamond on points close to input point 
+# mark diamond on points close to input point
 plt.scatter(train_scaled[indexes,0], train_scaled[indexes,1], marker='D')
 
 plt.xlabel('length')

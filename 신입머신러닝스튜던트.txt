@@ -28,11 +28,11 @@ plt.show()
 
 신기하다. 원리는 plt.scatter(X축, Y축) 과 show
 
-하나의 그래프에 여러개의 데이터를 넣을 수 있다.
-scatter( data1, data1_)
-scatter(data2, data2_) 
+하나의 그래프에 여러개의 데이터를 넣을 수 있다. 그럼 알아서 색깔도 다르게해줌
+plt.scatter( data1, data1_)
+plt.scatter(data2, data2_) 
 
-2. 데이터합치기
+2. 데이터합치기 for 분류 (Classifier)
 
 length = bream_length + smelt_length
 weight = bream_weight+ smelt_weight
@@ -41,14 +41,18 @@ fish_data =[[l,w] for l, w in zip(length, weight)]
 
 이렇게하면 [  [l1, w1].... [ln, wn]]  2 dimensional array가 만들어져.
 
-이렇게합쳐놓고, 뭐가 뭔지 지정을 해줘야해. 
+이렇게합쳐놓고, 뭐가 뭔지 지정을 해줘야해. (정답지)
 
 fish_target = [1]*len(bream_length) + [0]*len(smelt_length) 이렇게하면 bream은 1로써 저장되고 smelt는 0으로써 저장되겠지. 찾을려는 정보를 1로 놓는게 좋다. 
+[1,1,1,1,1,1,1,1,0,0,0,0,0,0,0] 이런모양이 돼.
 
 ***numpy의 기능을 이용해 간단하게 표현할 수 있다.***
 # fish_data =[[l,w] for l, w in zip(length, weight)]
 fish_data = np.column_stack((length, weight))
  col1에 길이 데이터, col2에 무게 데이터를 넣는다는뜻.
+[ [ l1, w1 ], 
+   [l2, w2]...] 이렇게 저모양으로 스텍이쌓이네요
+
 
 # fish_target = [1]*len(bream_length) + [0]*len(smelt_length)
 fish_target = np.concatenate((np.ones(len(bream_length)), np.zeros(len(smelt_length))))
@@ -63,8 +67,9 @@ kn = KNeighborsClassifier()
 
 //machine learning model
 kn.fit(fish_data, fish_target)   
+반반나눈 data와 target을 묶는다.. data값일때 정답은 target이게.. 
 
-//그냥 얼마나 잘맞추는지. 1= 100%정답률.
+//그냥 얼마나 잘맞추는지. 1= 100%정답률. = 여기선 당연히 그래야하는게 섞을때 같은 index로했기때문에.. 예를들어 data[n]가 '대한민국'였을경우 target[n]='Korea'이기때문에 항상일치.
 kn.score(fish_data, fish_target)
 
  새로운 데이터를 주고 어느 집단에속하는지 알게하는법
@@ -86,6 +91,9 @@ kn49.score(fish_data, fish_target)
 
 train_input/target과 test_input/target을 분리한다.
 연습할때는 train, 실험해볼때는 test로 해본다.
+
+*여기서 A집단은 array = [, , , ]이고 fish_data= A집단+ B집단.
+
 train_input = fish_data[:len(A집단)]
 train_target =fish_target[: len(A집단)]
 
@@ -97,7 +105,7 @@ kn = kn.fit(train_input, train_target)
 
 kn.score(test_input, test_target)
 
-대신 이렇게하면, train할때와 test할때 데이터가 딴판일수 있기때문에,
+대신 이렇게하면, train할때와 test할때 데이터가 딴판일수 있기때문에, (A집단으로 훈련했는데, 정작 물어보는건 B집단이라, A,B를 골고루 섞어야할 필요가있음)
 
 numpy를 이용해야한다.
 
@@ -114,19 +122,19 @@ np.array를하면 쉼표가 사라지고
 []
 ]의 모습을 가진다
  
-index = np.arange(len(A+B집단))
-np.random.shuffle(index)
-
-
+index = np.arange(len(A+B집단))     #arange(N)은 0~N까지의 숫자로 이루어진 array생성. 0번째 index엔 0, 1th index엔 1....  
+np.random.shuffle(index)  #저 어레이를 랜덤하게 섞음. 
 
 이것을 해준후,
-train_input = input_arr[index[: len(A집단)]]
+train_input = input_arr[index[: len(A집단)]]        
 train_target = target_arr[index[:len(A집단)]]
 
 test_input = input_arr[index[len(A집단): ]]
 test_target = target_arr[index[len(A집단): ]]
 
-이것들은 배열 슬라이싱인데, input_arr 의 index[0:a집단의수]면 (index에있는 0~집단의 수th 번째 원소에 해당하는 값)번째에 있는 input_arr의 원소들을 반환해
+#원리는, index[: k]로 무작위의 인덱스배열중 0~k까지 불러들여.
+그리고 input_arr[ a,b,c]를 해주는데 이것은 [input_arr[a],input_arr[b],input_arr[c]]하는것과같음
+#이것들은 배열 슬라이싱인데, input_arr 의 index[0:a집단의수]면 (index에있는 0~집단의 수th 번째 원소에 해당하는 값)번째에 있는 input_arr의 원소들을 반환해
 
 예를 들면
 a= np.array([5,6,7,8])
@@ -239,7 +247,14 @@ plt.show()
 train_input, test_input, train_target, test_target = train_test_split(
     perch_length, perch_weight, random_state= 20
 )
-이러면 perch_length를 train과 test input이 나눠먹고, perch_weight를 train과 test target이 나눠먹어.
+이러면 perch_length를 train과 test input이 나눠먹고, perch_weight를 train과 test target이 나눠먹어. 
+classification에선 
+[
+ [], 
+ []
+] 이렇게나뉘었다.
+
+여기서 왜 모양이 1자로 나오나면, perch_length가 그냥 [ , , ,]형식의 데이터였기때문이야. 저 위에서 classifier할때는 fish_data = np.column_stack(length, width)해서 stack모양으로 만들어줬음.
 
 이러면 모양이 [ [v1,v2] , [v3,v4], .....]이런모양이나오기때문에, 
 [
@@ -247,7 +262,7 @@ train_input, test_input, train_target, test_target = train_test_split(
 [v3,v4]
 ...
 ]
-이렇게 하고싶다면 reshape를 써라.
+이렇게 하고싶다면 reshape를 써라. -> knr.fit에 필요함. 
 
 train_input = np.array(train_input).reshape(-1,1)
 test_input = np.array(test_input).reshape(-1,1)
@@ -265,6 +280,8 @@ knr.score(test_input, test_target)
 
 9. 오차
 아래코드는 오차값을 나타내준다.
+**예제들에서 input = 길이 target=무게 였던것을 상기하자.
+
 from sklearn.metrics import mean_absolute_error
 test_prediction = knr.predict(test_input)
 mae = mean_absolute_error(test_target, test_prediction)
@@ -280,8 +297,6 @@ mae = mean_absolute_error(test_target, test_prediction)
 30.612000000000013 print(mae)
 
 
-예제들에서 input = 길이 target=무게 였던것을 상기하자.
-
 코드를보면 test_prediction은 test_input (length)값에 기초해서 weight를 예측한다. 그것이 실제 target (weight)값과 비교했을때 오차가 좀 있는데, 그것이 mae이다. 
 
 10. 과대적합/ 과소적합
@@ -292,3 +307,62 @@ print("train score:",knr.score(train_input, train_target) , "\ntest score",knr.s
 해소법은 knr.n_neighbors를 조절하면된다. 기본값이 5인데, 그것보다 높으면 과소적합, 낮으면 과대적합 
 k가 높아질수록 train때보다 test값이 커진다. 
 k가 낮아질수록 train때보다 test값이 작아진다.
+
+11. 코렙에서 새로운 노트북을 해야 새로운 파일이 드라이브에 저장된다. 그렇지 않으면 계속하나의 파일에 덮어쓰기하는거임..
+
+12. MachineLearning 5
+최근접이웃에 문제점은 샘플범위밖의 수치가 주어졌을때, 그 값에 대한 결과를 주는게아니라, 걔랑 근접한 이웃을 참고해서 값을 반환하기때문에, y = x라는 그래프를 가지고 있어도 샘플이 [0~10]만 주어지고 실제 인풋은 100이라면 100을 반환하는게아니라 10을 반환함. 10이가장 가까운친구이기 때문에.
+
+선형회귀 (linear regression)을 써야한다.
+from sklearn.linear_model import LinearRegression
+
+lr = LinearRegression()
+
+lr.fit(train_input, train_target)
+
+coef = np.array(lr.coef_).reshape(-1,)
+intercept = np.array(lr.intercept_).reshape(-1,)
+print("y = ", coef,"x + ", intercept) #coef와 intercept는 [[a]]의 형태를 가지고있다.
+
+predicted_weight = lr.predict([[input_length]])
+print("linear regression:", predicted_weight)
+plt.scatter(train_input, train_target)
+plt.scatter( input_length, predicted_weight, marker ='^')
+plt.show()
+
+이것에 대한 결과는 이미지파일로 저장해두었다. 아주 강력한기능이다. knr은 그 주변 이웃들의 결과의 평균을 산출했다면, linear은 데이터들을 그래프로 그리고 그것에 대한 기울기와 절편을 구해서 x에 input값을 대입해서 y를 구하는 느낌이다.
+
+ymin = 20*coef + intercept
+ymax = 40*coef + intercept
+print(ymin, ymax)
+plt.plot([20, 40], [ymin, ymax])
+그래프를 그릴 수 있다. 꼭 reshape(-1, )를 해줘야. 줄갯수가 0이되기때문에 2차원배열이아니라 1차원배열로 된다. 그래야 plot을 그릴 수 있어. 20은 데이터의 가장작은 값보다 작은값 40은 가장큰값보다 큰값으로 설정해서 그래프의 나아가는 방향을 나타내고자했다.
+
+단점이라면 선형그래프이기때문에 음수가 나올 수 있다는점.그리고 곡선은 표현하지않는다는점..
+
+13. 그래서 배우는 다항회귀 (2차,3차.,.ㅜㅜ)
+
+2차원그래프그리는 식이,, y = ax^2 + bx + c 라고한다.. 파이썬에서 제곱은 **2로표현한다.
+train_poly = np.column_stack((train_input**2, train_input))
+test_poly = np.column_stack((test_input**2, test_input)
+
+
+lr = LinearRegression()
+lr.fit(train_poly, train_target)
+
+predicted_weight_poly = lr.predict([[input_length**2, input_length]]) #입력값을 사용한 예측값
+
+coef_poly = np.array(lr.coef_).reshape(-1,)       #반드시 이렇게 해야 plot으로 그릴 수 있음. 1차원化
+intercept_poly = np.array(lr.intercept_).reshape(-1,)
+
+plt.scatter(train_input, train_target) #학습데이터 그래프에 표시하기
+plt.scatter(input_length, predicted_weight_poly, marker ='^') #예상지점 ^으로 표시하기
+
+print(coef_poly ,intercept_poly) #[2.90924793 -142.59537447] [2179.20603384]
+point = np.arange(20,40) #20은 데이터상 가장작은값보다 작은값 40은 가장큰값보다 큰값. plot에서 선형일때는 [20,40]안에서 내맘대로 쭉긋고쓰면 됐지만 선형이라 모든 포인트가 필요해서이렇게 쓰는듯하다. 선형은 시작지점, 끝지점을 정했잖아.
+plt.plot(point, coef_poly[0]*point**2 +coef_poly[1]*point + intercept_poly) # y = ax^2+bx+c where a =coef[0], b= coef[1], c= intercept.
+
+plt.show()
+
+
+
