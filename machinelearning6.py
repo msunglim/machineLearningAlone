@@ -47,12 +47,12 @@ test_target = np.array(test_target).reshape(-1,1)
 # print(len(train_target)) #42
 # print(len(train_input)) #42
 
-poly = PolynomialFeatures(degree=5, include_bias= False)
+poly = PolynomialFeatures(degree=2, include_bias= False)
 poly.fit(train_input)
 train_poly = poly.transform(train_input)
 
-print(train_poly.shape) #(42,9)
-# print(poly.get_feature_names_out()) #['x0' 'x1' 'x2' 'x0^2' 'x0 x1' 'x0 x2' 'x1^2' 'x1 x2' 'x2^2']
+print("shape",train_poly.shape) #(42,9) when degree =2
+print(poly.get_feature_names_out()) #['x0' 'x1' 'x2' 'x0^2' 'x0 x1' 'x0 x2' 'x1^2' 'x1 x2' 'x2^2']
 
 test_poly = poly.transform(test_input)
 # print(test_poly)
@@ -60,8 +60,8 @@ test_poly = poly.transform(test_input)
 lr = LinearRegression()
 lr.fit(train_poly, train_target)
 
-print(lr.score(train_poly, train_target))
-print(lr.score(test_poly, test_target))
+print("LR score:",lr.score(train_poly, train_target))
+print("LR score:",lr.score(test_poly, test_target))
 
 ss = StandardScaler();
 ss.fit(train_poly)
@@ -70,62 +70,94 @@ train_scaled = ss.transform(train_poly)
 test_scaled = ss.transform(test_poly)
 
 #Ridge Regression
-ridge = Ridge() #default alpha =1
+ridge = Ridge(alpha=0) #default alpha =1
 ridge.fit(train_scaled, train_target)
 
-print(ridge.score(train_scaled, train_target))
-print(ridge.score(test_scaled, test_target))
+print("Ridge score",ridge.score(train_scaled, train_target))
+print("Ridge score",ridge.score(test_scaled, test_target))
 
-#find Best alpha value 
-alpha_list = [0.00000001,0.0000001,0.000001,0.00001,0.0001,0.001,0.01,0.1,1,10,100,1000]
-train_score_list = []
-test_score_list = []
-for alpha in alpha_list:
-  ridge = Ridge(alpha=alpha)
+# #find Best alpha value 
+# alpha_list = [0.00000001,0.0000001,0.000001,0.00001,0.0001,0.001,0.01,0.1,1,10,100,1000]
+# train_score_list = []
+# test_score_list = []
+# for alpha in alpha_list:
+#   ridge = Ridge(alpha=alpha)
   
-  ridge.fit(train_scaled, train_target)
-  train_score_list.append(ridge.score(train_scaled, train_target))
-  test_score_list.append(ridge.score(test_scaled, test_target))
+#   ridge.fit(train_scaled, train_target)
+#   train_score_list.append(ridge.score(train_scaled, train_target))
+#   test_score_list.append(ridge.score(test_scaled, test_target))
 
-plt.plot(np.log10(alpha_list), train_score_list)
-plt.plot(np.log10(alpha_list), test_score_list)
-plt.show()
+# plt.plot(np.log10(alpha_list), train_score_list)
+# plt.plot(np.log10(alpha_list), test_score_list)
+# plt.show()
 # print(np.log10(alpha_list))
 
 #Lasso Regression
-lasso = Lasso(alpha=1)
+lasso = Lasso(alpha=10)
 lasso.fit(train_scaled, train_target)
 
-print(lasso.score(train_scaled, train_target))
-print(lasso.score(test_scaled, test_target))
+print("Lasso score",lasso.score(train_scaled, train_target))
+print("Lasso score",lasso.score(test_scaled, test_target))
 print("# of attributes using Lasso: ",np.sum(lasso.coef_==0))
 
-#find Best alpha value 
-alpha_list = [0.001,0.01,0.1,1,10,100,1000]
-train_score_list = []
-test_score_list = []
-for alpha in alpha_list:
-  lasso = Lasso(alpha= alpha)
+# #find Best alpha value 
+# alpha_list = [0.001,0.01,0.1,1,10,100,1000]
+# train_score_list = []
+# test_score_list = []
+# for alpha in alpha_list:
+#   lasso = Lasso(alpha= alpha)
   
-  lasso.fit(train_scaled, train_target)
-  train_score_list.append(lasso.score(train_scaled, train_target))
-  test_score_list.append(lasso.score(test_scaled, test_target))
+#   lasso.fit(train_scaled, train_target)
+#   train_score_list.append(lasso.score(train_scaled, train_target))
+#   test_score_list.append(lasso.score(test_scaled, test_target))
 
-plt.plot(np.log10(alpha_list), train_score_list)
-plt.plot(np.log10(alpha_list), test_score_list)
-plt.show()
+# plt.plot(np.log10(alpha_list), train_score_list)
+# plt.plot(np.log10(alpha_list), test_score_list)
+# plt.show()
 
-
-plt.scatter(train_poly[:,0], train_target)
-plt.scatter(train_poly[:,1], train_target)
-plt.scatter(train_poly[:,2], train_target)
-plt.show()
+# unscaled
+# plt.scatter(train_poly[:,0], train_target)
+# plt.scatter(train_poly[:,1], train_target)
+# plt.scatter(train_poly[:,2], train_target)
+# plt.show()
 
 plt.scatter(train_scaled[:,0], train_target)
 plt.scatter(train_scaled[:,1], train_target)
 plt.scatter(train_scaled[:,2], train_target)
+plt.show()
+l = 28.4
+h = 7.11
+w = 4.14
+list = np.array([l,h,w]).reshape(-1,3)
+
+poly.fit(list)
+input = poly.transform(list)
+print("input",input)
+
+ss = StandardScaler();
+ss.fit(input)
+# input_scaled = ss.transform(input)
+
+#cant get scaled input because there is only one row. The formular of scale is (value - mean)/std. 
+#In this case, mean is equal to the only row. Therefore, return all zeros.
+
+# print(input_scaled)
+
+ridge = Ridge(alpha=1) #default alpha =1
+ridge.fit(train_poly, train_target)
+lasso = Lasso(alpha=100)
+lasso.fit(train_poly, train_target)
+
+print("LR predict",lr.predict(input))
+print("Ridge predict",ridge.predict(input))
+print("Lasso predict",lasso.predict(input))
 
 
+plt.scatter(train_poly[:,0], train_target)
+# predicted values
+plt.scatter(input[:,0], lr.predict(input), marker='^')
+plt.scatter(input[:,0],ridge.predict(input), marker='D' )
+plt.scatter(input[:,0],lasso.predict(input), marker='D' )
 plt.show()
 
 
