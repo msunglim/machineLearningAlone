@@ -460,6 +460,7 @@ plt.plot(np.log10(alpha_list), train_score_list)
 plt.plot(np.log10(alpha_list), test_score_list)
 plt.show()
 이렇게 그래프를 그리고, 가장 서로의 그래프의 간격이 적은 쪽의 alpha값을 취한다. 왼쪽으로 갈수록 과대적합이고 오른쪽으로 갈수록 과소적합이된다. 왼쪽으로 갈 수록 훈련세트 위주로 훈련을 하는거니까 실제 값은 훈련세트랑 다르니까 빗나가는거임. 반대로 오른쪽으로 갈 수록 훈련세트를 무시하니까 훈련세트의 정확도가 감소.
+alpha가 규제인데, 규제가 커질수록 과소적합, 적어질수록 과대적합이라고한다.
 
 Lasso 회귀라는것도 있는데, 이것은 가중치의 절대값으로 계산한다.
 
@@ -627,4 +628,70 @@ proba = lr.predict_proba(test_scaled[:5])
 print("lr.predict_proba",np.round(proba, decimals = 3)) 
 
 16. machineLeraning8 
-점진적학습: 데이터가 계속들어올때 기존에있던것에 추가한후 다시 훈련을 한다.
+점진적학습: 데이터가 계속들어올때 기존에있던것에 추가한후 다시 훈련을 한다. 서비스중인걸 중단하고 다시 업데이트
+온라인학습(서비스중에 업데이트가능) -> 확률적경사하강법... 머라는지모르겟다. stochastic gradient descent SGD -> 최적화방법 . 무작위하게 경사를 내려가는 방법을 찾는법이라는 뜻으로 번역가능. 점진적으로 천천히 내려간다. 
+샘플(확률적)하나씩 꺼내서 훈련(경사)시킨다->(반복)-> 훈련세트에 있는 샘플을 다썼다면-> 1에포크(epoch) 완료. 텅빈 훈련세트를 다시 채워서 2epoch 실행..반복
+.. 하나씩 꺼내는거말고 여러개씩꺼내는건 미니배치경사하강법(2의배수.. 한번에 전부 꺼내기는 배치경사하강법 이라고한다.
+
+손실함수: 머신러닝알고리즘이 얼마나 나쁜지 측정 (낮을수록 좋은 알고리즘)
+미분가능한 함수로 해야한다.ㅋ-> 로지스틱 손실함수...
+회귀에서는 평균 제곱, 절대값오차 함수를 사용가능(미분가능) 그래서 손실함수 = 측정지표
+분류에서는 정확도로 성능을 측정, 로지스틱함수로 최적화측정
+
+로지스틱손실함수. 예측확률:0~1의값.
+-log0.2 와 -log0.8로 실험해보든지.
+정답이 1일때:-log(예측확률)
+값이 1에 근접할수록 작음.
+값이 0에 근접할수록 큼
+
+정답이 0일때:-log(1-예측확률) 
+값이 0에 근접할수록 작음.
+값이 1에 근접할수록 큼.
+
+따라서 어떤 정답이든 예측값이 정답이랑 멀수록 값이 크다는것을 알 수 있다. 그래서 그값이 작은것을 찾아야 손실이작음. 크로스엔트로피손실함수라고도 부른다.
+
+데이터전처리하는중 반드시!! 스케일을 맞춰줘야한다. 
+에포크가 많아질수록 과대적합이되고 너무적으면 과소적합이라고한다. 
+
+이건그냥 알아낸건데 DataConversionWarning: A column-vector y was passed when a 1d array was expected. Please change the shape of y to (n_samples, ), for example using ravel() 이런 애러가뜨면 저기서 시키는데로 마지막에 .ravel()붙이면되드라..
+
+아무튼 이번에는 얼마나 학습하는게 가장 효율적이고 정확한지 알아볼거야
+반드시 데이터를 전처리해서 분석해야해
+
+
+from sklearn.linear_model import SGDClassifier #stochastic gradient descent. epoch epoch epoch. train train train.
+
+
+sc = SGDClassifier(loss='log', max_iter=20, random_state=42) #max_iter = # of epoch (how many times repeat) max_iter는 반복할 횟수. random_state는 아무거나해도됨 회귀문제일때는 SGDRegressor을 쓰면된다. loss=log해줌으로써 로지스틱함수 쓰겠다는 뜻
+
+#get accuracy 정확도측정
+sc.fit(train_scaled, train_target.ravel())
+print(sc.score(train_scaled, train_target))
+print(sc.score(test_scaled, test_target))
+
+
+#train once more and get accuracy.
+sc.partial_fit(train_scaled, train_target.ravel()) #to avoid DataConversionWarning, put .ravel()
+print(sc.score(train_scaled, train_target)) 
+print(sc.score(test_scaled, test_target))
+
+그냥 fit이랑 pratial_fit이랑 다른점은 fit은 예전거 다버리고 다시 세팅하는반면, pratial_fit은 기존의 것을 유지하면서 점진적으로 추가로 한번 더 훈련할 수 있음
+
+epoch가 많이할 수록 과소적합문제 (train < test) 발생하는데 너무적게하면 과대적합문제 (train > test)기 때문에 적당한 중앙값을 찾는 과정이 필요한데 그것을 '조기종료'라고한다.
+
+sc = SGDClassifier(loss='log', random_state=42) 이렇게 max_iter를 정해주지않고 계속 돌린다.
+classes = np.unique(train_target)
+for _ in range(0, 300):
+  sc.partial_fit(train_scaled, train_target.ravel(), classes = classes)
+단, 이때 fit을 미리 해주지않았으므로 partial_fit 해줄때 classes를 언급해줄 필요가있다.
+
+걍뭐대충 여기쯤이다라고 생각하고 epoch를 하나 정한다.
+
+sc = SGDClassifier(loss ='log', max_iter =BEST EPOCH VALUE, tol=None, random_state=42)
+sc.fit(train_scaled, train_target.ravel())
+print(sc.score(train_scaled, train_target)) 
+print(sc.score(test_scaled, test_target))
+
+BEST EPOCH VALUE에 너가 생각하는 EPOCH값을 넣고 돌려본다. tol=None은 뭐 정밀도라는데.. 그냥써야하나.. 저걸 안쓰면 과대/과소가 뒤바껴..다른때는 몰라도 최적의 에포치를 넣는곳에서라도 써주자.
+
+얘는 머신러닝알고리즘이아니라 머신러닝알고리즘을 최적화하는 방법임. epoch를 구하는 과정은 확률적경사하강법를 몇번해야 가장 정확한지를 알기위해 하는건가보다. 확률적경사하강법은 새로운 데이터가 들어왔을때 그것을 이용해서 다시 훈련하는거고..
