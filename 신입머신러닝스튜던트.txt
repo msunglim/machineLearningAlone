@@ -695,3 +695,76 @@ print(sc.score(test_scaled, test_target))
 BEST EPOCH VALUE에 너가 생각하는 EPOCH값을 넣고 돌려본다. tol=None은 뭐 정밀도라는데.. 그냥써야하나.. 저걸 안쓰면 과대/과소가 뒤바껴..다른때는 몰라도 최적의 에포치를 넣는곳에서라도 써주자.
 
 얘는 머신러닝알고리즘이아니라 머신러닝알고리즘을 최적화하는 방법임. epoch를 구하는 과정은 확률적경사하강법를 몇번해야 가장 정확한지를 알기위해 하는건가보다. 확률적경사하강법은 새로운 데이터가 들어왔을때 그것을 이용해서 다시 훈련하는거고..
+
+17.machineLearning9
+이진분류 결정트리
+
+wine = pd.read_csv('https://bit.ly/wine_csv_data')
+# wine.head() #pandas로 불러온거를 .head(N)하면 가장  처음N개의 row를 return하는데 기본값은 5다.
+
+wine.info() #말그대로 csv의 정보를 줌. 총 몇개의 값이 있는지, column 종류 별로  NOT NULL 인게 몇개인지, 데이터타입은 어떤건지.
+
+wine.describe() #이거는 더 세부적인것을 알 수 있다. Column별로 count, mean, std, min, max, 25% 50% 75%의 값들을 알려준다.
+
+다시한번 복습하는 전처리과정
+1. 데이터를 분류한다 (데이터값들과 클래스값들로) data, target
+2. 스케일을 맞춰준다.
+3. LogisticRegression에 세팅한다.
+wine_data = wine[['alcohol','sugar','pH']].to_numpy()
+wine_target = wine[['class']].to_numpy()
+train_input, test_iput, train_target, test_target = train_test_split(
+  wine_data, wine_target, test_size=0.2, random_state = 42    
+)
+
+ss= StandardScaler()
+ss.fit(train_input)
+train_scaled = ss.transform(train_input)
+test_scaled = ss.transform(test_input)
+
+이거가지고 한번 LogisticRegression을 해보면 잘되지만, 정답 확률이 낮게나와. 서로다른 계수들이 어떻게 동작하는지 찾기어려워? 
+
+lr = LogisticRegression()
+lr.fit(train_scaled, train_target.ravel())
+
+print(lr.score(train_scaled, train_target))
+print(lr.score(test_scaled, test_target))
+
+print("coefs and intercept: ",lr.coef_, lr.intercept_)
+
+그래서 이거보다는 DecisionTree를 써보자.
+
+dt = DecisionTreeClassifier(random_state =42) #랜덤저거 굳이 안써도됨!
+dt.fit(train_scaled, train_target)
+
+print(dt.score(train_scaled, train_target))
+print(dt.score(test_scaled, test_target))
+
+plt.figure(figsize=(10,7)) #이건 그냥 시각적으로 크게보여주게하는거
+plot_tree(dt)
+plt.show()
+
+plot_tree(dt, max_depth = 1, filled=True, feature_names=['alcohol', 'sugar','pH']) 
+	루트~자식깊이1까지만   양/음성 색깔구분     사용된특성이름을 표시해줌. 훈련데이터 column순서대로 해줘야해
+values = [음, 양성의 개수] 여기서 음양은 현재노드에 비해 음양이라는거임
+samples= 이 아래있는 노드들의 수
+Attributes <=?? 왼쪽오른쪽나누는기준
+gini = 불순도 = 1 - (음성클래스비율^2 + 양성클래스비율^2) = 1 - ( ( value[0]/sample  )^2  + ( value[1]/sample )^2)
+
+지니불순도가 0.5일때 가장 불순한것, 0일때 가장 순수한것. 가장 순수해질때까지 분할한다. 지니불순도가 큰쪽으로 자식노드를 배당함.
+
+결정트리는 딱히 뭐 가중치도없고 그래프도 없어서 전처리를 안해도된다고한다.. (스케일을 맞추지않아도된다는소리임!!!!!)  맞추나안맞추나 늘 값이 같다고한다.
+
+max_depth가 올라갈수록 정답률이 상승하는건 세상의 이치지.
+
+dt.feature_importances_ 로 어떤 attribute가 가장 중요했는지 알 수 있다. 값이 높은 쪽 index의 column이 가장 중요한 역할을 하는것임! 가장 중요하다는 말은 그값에따라 음양이 갈린다는것,
+
+결정트리는 설명/이해/도면하기쉽고 중요도도 나타내기때문에 좋다.
+
+
+
+
+이러면 진짜 어디 느티나무같은 트리가그려져.. 보면 그냥 if( ) {  } else {  }이런식의 2개의 경로가있어. 쭉쭉내려가서 결정하는듯..
+
+분류: 마지막 리프모델샘플의 주위에 있는게 예측하는 타겟이됨.
+회귀: 마지막 리프모델샘플의 주위에 있는 값들의 평균이 예측하는 타겟이됨.ㄴ 
+
