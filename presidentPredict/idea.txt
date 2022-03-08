@@ -1,0 +1,7 @@
+대통령후보의 지지율 추세를 그래프로 나타내고 다음 input값에 누가더 높은 지지율을 가질지 예측하라.
+-> Regression문제.
+->LinearRegression으로 주어진 범위밖에있는 값예측
+->Poly를서서 직선말고 곡선의 그래프그리기.
+또는 PolynomialFeatures로 그릴 수도? degree를 내맘대로 바꾸기가능
+
+특성값이 1개이므로 ridge나 lasso는 쓰지않아도되는것처럼 보인다.
