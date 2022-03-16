@@ -984,3 +984,105 @@ scores = cross_validate(lgb, train_input, train_target, return_train_score=True,
 print("train score:",np.mean(scores['train_score']),"test score:", np.mean(scores['test_score']))
 
 앙상블로 심각한 작업을 하고싶다면 그레이디언트부스팅 또는 히스토그램(xgb light)으로 하면된다.
+
+트리앙상블로 더 강력한 훈련을 할 수 있다. 앙상블.predict([[a,b,c]])로 새로운 예측을 할 수 있다! 
+
+20. machineLearning 12 
+비지도학습 (사진보고 분류하는거~)
+타겟이 없는 문제. 특성데이터만 있을때
+
+
+!wget https://bit.ly/fruits_300_data -O fruits_300.npy
+fruits = np.load('fruits_300.npy')
+
+이런걸이용해서 남이올려놓은 파일에 엑세스할수있다.
+
+이파일은 2차원배열이 여러개있는 3차원배열이다. 
+마치 체스판에서 정사각형의 하나의 칸을 나타내는 행과 열로 이루어진 하나의 2차원배열이 여러개있다는말
+[
+[  [d1x1,d1y1], [d1x2,d1y2].... ],
+[  [d2x1,d2y1], [d2x2,d2y2].... ],
+[  [d3x1,d3y1], [d3x2,d3y2].... ],
+...
+]
+
+print("Shape:",fruits.shape) #Shape: (300, 100, 100)
+
+print(fruits[0,0,:]) #이걸로는 첫번째 데이터에 첫번째줄에 대한 모든정보를 가져온다. 
+#[  1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   2   1
+   2   2   2   2   2   2   1   1   1   1   1   1   1   1   2   3   2   1
+   2   1   1   1   1   2   1   3   2   1   3   1   4   1   2   5   5   5
+  19 148 192 117  28   1   1   2   1   4   1   1   3   1   1   1   1   1
+   2   2   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1   1
+   1   1   1   1   1   1   1   1   1   1]
+
+이런모양인데, 숫자가 큰곳이있는경우는 그부분의 색이 흰색이라
+
+plt.imshow(fruits[0], cmap='gray_r')
+plt.show()
+#아무래도 그림으로 보는게 더 편하니 imshow기능으로 첫번째 데이터를 그려본다. cmap = 'gray_r'은 리버스회색이다. 기본데이터가 배경이 검정이라 보기편하게 리버스시켰다.
+
+2차원배열을 1차원으로 길게 늘려준다. 그냥 다루기가 편하대
+apple = fruits[0:100].reshape(-1, 100*100)
+pineapple = fruits[100:200].reshape(-1,100*100)
+banana = fruits[200:300].reshape(-1,100*100)
+
+# print(apple.shape)
+
+
+샘플의 평균을 히스토그램으로 나눠보자!
+샘플별로 평균내기
+plt.hist(np.mean(apple, axis=1), alpha= 0.8)
+plt.hist(np.mean(pineapple, axis= 1), alpha = 0.8)
+plt.hist(np.mean(banana, axis= 1), alpha =0.8)
+plt.legend(['apple', 'pineapple', 'banana']) 
+plt.show()
+axis =0이면 행에 따라↓보고 1이면 열에따라 → 평균을 낸다.
+alpha는 그냥 투명도인듯하다. 이러면 막대모양의 그래프가나온다.
+x축은 데이터값들이고 y축은 그 값들의 빈도이다. 
+
+픽셀별로  평균내기
+fig, axs = plt.subplots(1,3, figsize =(20,5))  #subplot는 부분그래프를 그린다. 여러그래프를 한이미지에 그릴 수 있게해준다. 1개의 행에 3개의 열을 넣게해준다. 3이니까 axs가 3개가되는거다.. 그냥 plt에서 하나의 행에 3개그래프를 그릴 수 있다는말인듯. figsize는 얼마나 촘촘한지 나타내는듯.. 
+
+axs[0].bar(range(10000), np.mean(apple, axis=0))
+axs[1].bar(range(10000), np.mean(pineapple, axis= 0))
+axs[2].bar(range(10000), np.mean(banana, axis=0))
+plt.show()
+
+이게 막대그래프가 겹쳐보이지만, 그냥 값이 여러개 한거번에 몰려있으면 더 짙게나온다.. 듬성듬성있으면 옅게 보이는데 값이 한곳에 밀집해있으면 짙게보이네.\
+
+바나나를 보면 기다란곳이 가운데는 항상 관통하므로 가운데는 짙고 높은값이 나오는반면, 파인애플은 두루두루 높게나오는것을 알 수 있다.
+짙은거 = 값이 여러번 출몰하는곳 
+값 = 그 부분의 색감이 어떤지
+ㅡㅡㅡ
+이미지 전체를 평균을내어 그것을 한번에 그릴려면 이렇게하면된다.
+apple_mean = np.mean(apple, axis=0).reshape(100,100)
+pineapple_mean = np.mean(pineapple, axis=0).reshape(100,100)
+banana_mean = np.mean(banana, axis = 0).reshape(100,100)
+
+fig, axs = plt.subplots(1,3,figsize=(20,5))
+axs[0].imshow(apple_mean, cmap ='gray_r')
+axs[1].imshow(pineapple_mean, cmap='gray_r')
+axs[2].imshow(banana_mean, cmap = 'gray_r')
+plt.show()
+ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+사과 100개 이미지 보여주기 
+abs_diff = np.abs(fruits - apple_mean) #diff 총 과일 데이터에서 사과의 평균값을 빼준다.
+abs_mean = np.mean(abs_diff, axis=(1,2)) #그리고 그 데이터의 1번째 2번째 축으로 (0번째 축은 샘플의 행이므로 제외) 평균을 내준다.
+
+print(abs_mean.shape) #그럼 이건 300개의 평균으로 이루어진 행이된다.
+
+apple_index = np.argsort(abs_mean)[:100] #평균값이 낮은순으로 100개만 정렬을한다. 사과의 평균을 뺐기때문에 0에 가까운것들이 사과가 될것이다. 왜냐면 사과-사과일테니.
+
+fig, axs = plt.subplots(10,10, figsize=(10,10))
+for i in range(10):
+  for j in range(10):
+    axs[i,j].imshow(fruits[apple_index[i*10+j]], cmap='gray_r') #apple_index에는 사과밖에없다. i*10+j번째의 사과를 fruit array에서 축출할수있다. 저렇게하면 apple_index에있는 사과가 fruit에서 검색되어 출력된다. i*10+j로 0에서 99까지의 사과를 가져올 수 있다.
+    axs[i,j].axis('off')
+plt.show()
+
+이것이 군집 클러스터링이라고한다. 
+
+
+
+
