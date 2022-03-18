@@ -1243,5 +1243,108 @@ plt.legend(['apple', 'banana', 'pineapple'])
 plt.show()
 
 
+23. 딥러닝시작
+machineLearning 15
+
+패션 MNIST
+케라스에 연습예제가 있다고한다. 
+from tensorflow import keras
+
+(train_input, train_target), (test_input, test_target) = keras.datasets.fashion_mnist.load_data()
+
+이렇게 두개의 쌍으로 리턴해주기때문에 좋다.
 
 
+print(train_input.shape, train_target.shape)
+
+print(test_input.shape, test_target.shape)
+
+각각 
+(60000, 28, 28) (60000,)
+(10000, 28, 28) (10000,) 이렇게나온다.입력에는 60000개의 샘플이 (하나당 2개의 특성으로 이루어진)들이있고 타겟에는 1개의 답이있다 (당연하지)
+
+이걸로 훈련세트 처음 10개만 출력해본다. 
+fig, axs = plt.subplots(1, 10, figsize= (10,10))
+for i in range(10):
+  axs[i].imshow(train_input[i], cmap='gray_r')
+  axs[i].axis('off')
+plt.show()
+
+0~255의 색중 0일수록 어둡고 255일수록 밝다. 단, 여기서는 색감반전을 해서 0일수록 밝게해준다. 육안으로 보기 편하게
+
+
+print([train_target[i] for i in range(10)])
+
+print(np.unique(train_target, return_counts =True))
+
+#[9, 0, 0, 3, 0, 2, 7, 2, 5, 5] 훈련세트 처음10개의 정답
+#(array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9], dtype=uint8), array([6000, 6000, 6000, 6000, 6000, 6000, 6000, 6000, 6000, 6000])) 각 정답당 6천개씩 할당되어있다고한다.
+
+딥러닝에서 픽셀값은 255로 나눠 0~255의 범위를 0~1로줄여준다. 그리고 3차원데이터를 2차원으로 만들어준다.
+train_scaled = train_input / 255.0
+train_scaled = train_scaled.reshape(-1, 28*28)
+
+print(train_scaled.shape) #(60000, 784) 
+
+그것을 경사하강법을 사용한 로지스틱회귀를 사용해준다. 그것을 교차검증으로 정확도를 한번 봐본다. 정답의 종류(클래스)가 10개이므로 다중분류이다. (2개이면 2중분류). 그것을 5개의 폴드로 5번검증세트로 나누어 검증해본다.
+sc = SGDClassifier(loss='log', max_iter= 5, random_state= 42)
+
+scores = cross_validate(sc, train_scaled, train_target, n_jobs =-1)
+print(np.mean(scores['test_score']))
+
+원리는 
+샘플데이터-> 각각의 계수를 곱하기 -> 각각의 Z (이것은 하나의 데이터당 클래스의 종류개수만큼) 그것을 데이터의개수만큼하기. z를 뉴런이라고 부른다.
+
+이렇게 생성된 z들을 소프트맥스 함수로 계산해준다.
+
+교차검증을 사용하지않고, 케라스로 모델을 만들수 있다. 왜냐면 계산비용이 늘어나니까. 데이터가 너무많아. 그래서 그냥 검증세트를 20퍼정도 띄어놓고 해도됨.
+train_scaled, val_scaled, train_target, val_target = train_test_split(
+    train_scaled, train_target, test_size = 0.2, random_state = 42
+)
+
+print(train_scaled.shape, train_target.shape)
+
+print(val_scaled.shape, val_target.shape)
+
+#잘띄어졌다.(48000, 784) (48000,)
+(12000, 784) (12000,) 여기서 784는 28*28
+
+			
+dense = keras.layers.Dense(10, activation='softmax', input_shape=(28*28,))
+클래스종류가 10개기때문에 10층이다. 모든 데이터가 모든층에 빢빡하게 연결되어서 ? fully connected layer라고 부른다.. 출력층은 클래스개수와 항상 같다. 다중분류이기때문에 softmax를 사용한다. 2진분류일경우 sigmoid를 쓰면된다고한다. input shape의 크기는 샘플의 크기다. 크기가 개수가아니라, shape에서 (개수, 크기)로나온다. 
+
+model = keras.Sequential(dense)
+model.compile(loss ='sparse_categorical_crossentropy', metrics ='accuracy')
+
+정확도를 기록하고 싶다면 metrics= accuracy를 넣어준다.
+손실도를 기록하고싶다면 loss = sparse_categorical_crossentropy를 해주는데, 이진 분류일경우 binary_crossentropy를 해준다.
+sparse가 붙은이유는 원핫인코딩이 안되어있을경우 타깃값을 정수로 저장하기위해쓴다.원핫인코딩(타깃인것만 1, 나머지는 0으로 저장함)이 되어있을경우쓰지않는다., 
+
+print(train_target[:10]) #[7 3 5 8 6 9 3 3 9 9]
+
+model.fit(train_scaled, train_target, epochs= 5)
+#Epoch 1/5
+1500/1500 [==============================] - 3s 1ms/step - loss: 0.6082 - accuracy: 0.7938
+Epoch 2/5
+1500/1500 [==============================] - 2s 1ms/step - loss: 0.4788 - accuracy: 0.8400
+Epoch 3/5
+1500/1500 [==============================] - 2s 1ms/step - loss: 0.4567 - accuracy: 0.8485
+Epoch 4/5
+1500/1500 [==============================] - 2s 1ms/step - loss: 0.4445 - accuracy: 0.8529
+Epoch 5/5
+1500/1500 [==============================] - 2s 1ms/step - loss: 0.4367 - accuracy: 0.8561
+
+애포크가 올라갈수록 손실도가 떨어지고 정확도가 올라간다..
+
+검증세트를 평가해본다. 나름 85퍼정도로 ㄱㅊ게나온다.
+print(model.evaluate(val_scaled, val_target))
+375/375 [==============================] - 1s 1ms/step - loss: 0.4538 - accuracy: 0.8495, [0.45378515124320984, 0.8495000004768372] 
+
+오늘 배운것은 딥러닝에서는 사이킷런의 로지스틱함수를 써도되겠지만 케라스모델을 쓰는데, 케라스모델은 층을 만드는부분과 모델을 만드는 부분을 설정해줄 수 잇게 태생적으로 만들어져있다고한다. 다양한 실험을 할 수 있다는 장점이있다.
+
+24. 
+
+
+
+
+ 
