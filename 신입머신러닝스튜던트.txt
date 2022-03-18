@@ -1144,4 +1144,104 @@ plt.show()
 그래프에서 딱 꺾이는 지점이 최고의 k값이라고한다.
 print(km.n_iter_) 
 
+k평균의 최대단점이 cluster의 수를 미리정해야하는점인데, 위의 그래프로 그 단점을 약간 보완할 수 있다.
+
 만족스럽지않다면 지도학습을 통해 현실적인 값을 찾을 수 있게 도와준다.
+
+22. 주성분분석
+machineLearning 14 
+
+차원축소 
+일반적으로는 (2차원이상의 배열에선 축(axis)을 차원이라고한다.) 1차원배열(백터)에서는 원소의 갯수를 차원이라고 부른다.
+
+하지만 예를들어 2차원배열의 특성이 3개라면 하나의 특성을 하나의 백터로봐서 그래프로 그린다면 3차원그래프가 그려질 수 있다. 차원축소한다는것은 이 특성(벡터)의 개수를 줄인다는것을 의미한다. 
+
+주성분분석 Principal주요한 Component성분 Analysis분석
+가장많이 퍼져있는 쪽을 찾는다 (데이터들이 공통적으로 관통하는 선을 찾는다).
+이때 2개의 특성(축)으로 이루어진것에서 하나의 축(주성분)을 찾기때문에 2개의 특성을 하나의 특성(주성분)으로 '축소'한다는것이다.
+
+또 하나의 주성분을 찾을 수 있는데, 이때는 원래 찾은 주성분에 수직인 것이 또 하나의 주성분이다.
+
+
+pca = PCA(n_components= 50) #0~300개의 샘플이있는데 한 50개만 주성분을 찾아봐라
+pca.fit(fruits_2d)
+
+print(pca.components_.shape) #(50, 10000) 50개의 행 10000개의 열. 50개의 주성분은 100*100의 특성(픽셀)에서 나왔다는 뜻.
+
+draw_fruits(pca.components_.reshape(-1, 100, 100)) #주성분을 그리기
+
+print(fruits_2d.shape) # 300, 10000임 왜냐면 얘는 fruits_2d = fruits.reshape(-1, 100*100) 이건데 샘플이 300개잇어.
+
+fruits_pca = pca.transform(fruits_2d) #300,10000을 50개의 주성분으로 변환하기. 여기서 transform이 있다는것은 다른 분류기와 사용할 수 있다는 것이야. 예를 들어 LogisticRegression.
+print(fruits_pca.shape) #300,50
+
+50개의 주성분으로 줄였던것을 다시 10000개의 특성으로 변환하기. 단, 이때는 데이터 손실이 발생할 수 있다. 50/10000 = 1/200 이기때문에 저정도 손실이 발생한다.
+fruits_inverse = pca.inverse_transform(fruits_pca)
+print(fruits_inverse.shape) #300,10000
+
+fruits_reconstruct = fruits_inverse.reshape(-1, 100,100) 
+draw_fruits(fruits_reconstruct)
+
+print(np.sum(pca.explained_variance_ratio_)) 어느정도의 분산을 유지했는지 알려준다. 0.92가 나왔는데, 92퍼정도의 정확도를 가졌다는뜻? 
+
+plt.plot(pca.explained_variance_ratio_) #component수에 따라 얼마정도의 분산을 가지고 있는지 보여준다
+plt.show()
+
+분류기와 함께 사용해보자. 왜냐면 pca는 predict가 없다.. 그래서 이렇게 주성분을 찾고 그것으로 다른 분류기에 계산을 돕는다..
+
+lr = LogisticRegression() #자꾸 max_iter을 올리라하는데 시원하게 1000으로 올려주엇다.lr = LogisticRegression(max_iter = 1000)
+target = np.array([0]*100+[1]*100+[2]*100) #answer sheet
+
+scores = cross_validate(lr, fruits_2d, target)
+print('test score original',np.mean(scores['test_score']))
+
+print('fit time original',np.mean(scores['fit_time']))
+
+scores = cross_validate(lr, fruits_pca, target)
+print('test score pca 50',np.mean(scores['test_score']))
+
+print('fit time pca 50',np.mean(scores['fit_time']))
+
+test score original 0.9966666666666667
+fit time original 1.5076923370361328
+
+pca로 했을대 시간은 훨씬감축되고 정확도는 올라간것을 볼 수 있다. 왜냐면 original에서는 가중치가 많이부여되고 픽셀도 10000개나 되지만 주성분을 찾으면(pca) 50개밖에안되어 계산이빠르다.
+test score pca 50 1.0
+fit time pca 50 0.039377880096435544
+
+ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+
+
+pca = PCA(n_components = 0.5) #이렇게 실수를 넣으면 주성분을 0.5개찾아줘가아니라 분산의 비율이 0.5가 될때까지 찾아줘다.
+pca.fit(fruits_2d)
+print(pca.n_components_) #그럼 여기서 2가 나오는데, 주성분 2개만으로도 10000개의 픽셀을 표현할 수 있다는뜻이다..ㄷㄷ 여기서 주성분이 2개라는것은 [  , ] 이렇게 표현 가능하다는거임. 아까 50개했을때는 [ , , , , , , ,... ., ,, , ,]이런식으로 표현됨
+
+fruits_pca = pca.transform(fruits_2d)
+print(fruits_pca.shape)
+
+scores = cross_validate(lr, fruits_pca, target)
+print('test score pca 0.5',np.mean(scores['test_score']))
+
+print('fit time pca 0.5',np.mean(scores['fit_time']))
+
+test score pca 0.5 0.9933333333333334
+fit time pca 0.5 0.04951310157775879 결과는 이렇게나오는데 나름 괜찮은 점수이다.
+
+ㅡㅡㅡ
+군집(cluster)과 함께 사용하기
+km = KMeans(n_clusters =3, random_state = 42)
+km.fit(fruits_pca)
+
+print(np.unique(km.labels_, return_counts= True)) 
+#(array([0, 1, 2], dtype=int32), array([110,  99,  91])) 여기서 정확도가 100퍼센트가 아닌이유는 cross validate 햇을때 lr에서 100퍼랬지 여기서 km에선 아님...... 그래서 막몇개 섞여있따.
+
+시각화하기. 주성분이 2개라 모든 행(모든 샘플)을 표시하고, x축에는 주성분중 1번째, y축에는 주성분중 2번째 특성을 표시함으로써 데이터의 모양들을 알 수 있다.
+for label in range(0, 3):
+  data = fruits_pca[km.labels_ == label]
+  plt.scatter(data[:,0], data[:,1])
+plt.legend(['apple', 'banana', 'pineapple'])
+plt.show()
+
+
+
+
