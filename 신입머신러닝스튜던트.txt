@@ -1461,3 +1461,99 @@ print('ADAM',model.evaluate(val_scaled, val_target))
 
 
 머신러닝과 딥러닝의 차이점은 머신러닝은 앵간하면 엑셀이나 db처럼 데이터가 정형화된 파일을 분류하는데좋고 딥러닝은 이미지같이 그냥 한데 정보가 다 모여져있는거를 특징을 잡아서 다음층에 넘겨주면서 분석할 수 있다.
+
+25. machineLearning 17
+신경망 모델훈련
+이런식으로 model을 생성해보자
+def model_fn(a_layer=None):
+  model = keras.Sequential()
+  model.add(keras.layers.Flatten(input_shape = (28,28)))
+  model.add(keras.layers.Dense(100, activation ='relu'))
+
+  if a_layer:
+    model.add(a_layer)
+  model.add(keras.layers.Dense(10, activation='softmax'))
+  return model
+
+model = model_fn()
+
+
+epoch 개수에 따라 손실곡선을 그려보자.
+history = model.fit(train_scaled, train_target, epochs= 5, verbose = 0)
+#model fit 은 연산 정보들을 저장해준다. history에 그것들을 담으면 나중에 쓸 수 있다.
+
+print(history.history.keys()) #dict_keys(['loss', 'accuracy']) 가 나오는데 마치 이값은 컴파일할때 저장한 정보와 같다.. model.compile(loss='sparse_categorical_crossentropy', metrics='accuracy') 선 complie 후 fit하기때문에 당연한결과다.
+
+plt.plot(history.history['loss'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()
+
+plt.plot(history.history['accuracy'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()
+이런것들로 손실도/ 정확도를 그려볼 수 있는데, plt.plot에 그냥 1차원배열만 주면, 1차원배열의 개수만큼 x축이 생성되고 (0~ n), 1차원배열의 값은 (index, 값)에 맞게 그려진다. 예를 들어 [10,100,1000]의 배열을 넣었다면 그래프에는 (0,10), (1,100),(2,1000) 의 점들이 이어진 모양새가 될것.
+손실도는 epoch가 증가할 수록 내려가고 정확도는 epoch가 증가할수록 상승하는것을 볼 수 있따.
+하지만 epoch를 너무늘리면 train set에서만 너무 집중되기때문에 검증세트로도 테스트해보고 절충점을 찾아야한다.
+
+fit할때 validation_data = (val_scaled, val_target)을해주면 history.keys()에 loss, accuray와 함께 val_loss와 val_accuray가 같이 기록된다. 
+
+print(history.history.keys())
+
+그리고 그래프를 그릴때 같이 그려주자.
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()
+
+def model_fn(a_layer=None):
+  model = keras.Sequential()
+  model.add(keras.layers.Flatten(input_shape = (28,28)))
+  model.add(keras.layers.Dense(100, activation ='relu'))
+
+  if a_layer:
+    model.add(a_layer)
+  model.add(keras.layers.Dense(10, activation='softmax'))
+  return model
+
+model = model_fn(a_layer= keras.layers.Dropout(0.3)) #0.3은 30%정도 드롭아웃을 주겠다는것.
+model.summary()
+
+드롭아웃은 은닉층의 어떤 뉴론을 마치 없는거처럼 계산하지않아버린다. 여러샘플에 랜덤적인 뉴론을 뺌으로써 과대적합(훈련세트에 치중되는) 문제를 해소한다.
+실제로 loss값을보면, 드롭아웃없이는 epoch가 증가할 수록 훈련, 검증세트의 손실값이 많이 차이가 났는데, 드롭아웃을 해주면 어느정도 따라가는 모습을 보인다.
+
+ㅡㅡㅡㅡㅡㅡ
+모델 저장. 기껏 fit,compile한 모델을 저장할수있다.
+ 
+model.save_weights('model-weights.h5') 로 저장
+-> 
+model = model_fn(a_layer= keras.layers.Dropout(0.3))
+model.load_weights('model-weights.h5') 로 복구가능. weight만 저장했을때는 세팅을 다시해줘야.
+model.save('model-whole.h5')
+->model = keras.models.load_model('model-whole.h5') 로 복구가능
+
+
+val_labels = np.argmax(model.predict(val_scaled), axis = -1) 하면 각각의 row에서 가장큰값이 몇번째 col에있는지 알려준다.
+예를 들어 
+[[ 4,5, 6],
+ [ 1, 2, 5],
+ [5,2, 1]]
+인데 axis가 1이나 -1이라면, 첫번째 행에서[4,5,6]에서 가장큰값은 6이고 6은 2번째 col에 있으니 2이고 2번째 행도 2, 3번째행은 [5,2,1]에서 가장큰값이 5이고 0번째 col에있으니 0이다.
+즉 argmax는 [2,2,0]을 반환한다. 그 값이 val_labels에 저장되는데, 이 값들의 의미는 각각의 샘플이 어느 종류(target)에 해당되는지 의미한다.
+print(np.mean(val_labels == val_target))
+그리고 val_labels == val_target을 해서 그것이 같으면 1로 저장하고 다르면 0으로 저장한뒤 그것을 np.mean으로 평균값을 내준다. 그것이 정확도일터!
+
+epoch가 커질수록 검증세트의 손실도는 낮아지다가 어느지점에서 다시오른다. 이것을 손실도가 올라가는 지점에서 멈춘다면 최고의 epoch값을 얻을 수 있을것이다. 
+그것을 콜백기능을 이용해 알아보자. 조기종료의 콜백도있다.
+
+콜백중 best model은 fit으로 훈련하는 중에 손실도가 가장낮은 지점의 값들을 저장해준다.
+조기종료를 이용해 일찍이 멈추고 그중의 최고의 모델을 저장해보자. restore_best_weights=True, patience=2하면 최저점으로 간이후 2번은 올라가도 봐주는데 그 이상이라면 훈련을 멈추고 best인곳으로 돌아가라는 뜻이다. 
+
+checkpoint_cb = keras.callbacks.ModelCheckpoint('best-model.h5')
+early_stopping_cb = keras.callbacks.EarlyStopping(patience=2, restore_best_weights=True)
+history = model.fit(train_scaled, train_target, epochs= 5 , 
+                    verbose = 0, validation_data =(val_scaled, val_target), callbacks =[checkpoint_cb, early_stopping_cb])
+
+이때 넉넉히 epoch를 적는다. 왜냐면 어짜피 꺾이는지점에서 멈추기때문에 넉넉히 해도된다.
