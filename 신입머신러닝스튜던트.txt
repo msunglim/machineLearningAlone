@@ -1,4 +1,5 @@
-https://colab.research.google.com/?hl=ko
+https://colab.research.google.com/?hl=ko 강의링크
+https://github.com/rickiepark/hg-mldl 깃헙정답지
 
 접속 취소하고 
 연결 ->  호스팅된 런타임연결
@@ -1342,9 +1343,121 @@ print(model.evaluate(val_scaled, val_target))
 
 오늘 배운것은 딥러닝에서는 사이킷런의 로지스틱함수를 써도되겠지만 케라스모델을 쓰는데, 케라스모델은 층을 만드는부분과 모델을 만드는 부분을 설정해줄 수 잇게 태생적으로 만들어져있다고한다. 다양한 실험을 할 수 있다는 장점이있다.
 
-24. 
+24. machineLearning 16 
+심층신경망
+
+입력 -> 은닉 -> 출력으로 구성해본다.
+입력->출력사이 은닉층이 새로 생겼다.  
+다중분류: softmax 이진분류:sigmoid를 써준다. 여기서 분류하는것의 종류(target)가 3이상일경우 다중분류라고한다.
+
+기본적세팅으로 keras.dataset에 있는 fasion mist를 load_data()이런걸로 불러올수있는데 이때 자동으로 train, test set이 쌍으로 호출된다.
+
+거기서 train set을 255로 나눠 값의 범위를  0~1로 축소해주고 그것을 1차원배열들을 가진 2차원배열로 만들어준다. (-1, 28*28) 여기서 28은 정사각형 한 변의 픽셀수.
+
+그 후 연습세트를 검증세트, 찐 훈련세트로 나눠준다. 이것이 기본 세팅
+
+from tensorflow import keras
+from sklearn.model_selection import train_test_split
+
+(train_input, train_target), (test_input, test_target) = keras.datasets.fashion_mnist.load_data() #returns pairs of train and test set.
+
+train_scaled = train_input / 255.0 
+train_scaled = train_scaled.reshape(-1, 28*28) #make a sample one array. Do it to all samples.
+
+train_scaled, val_scaled, train_target, val_target = train_test_split(
+    train_scaled, train_target, test_size=0.2, random_state=42) #split for verification set.
+
+
+세팅이 끝났다면(입력층의 준비가 끝났다), 은닉,출력층을 만들어야하기때문에 
+desne1 = keras.layers.Dense(100, activation = 'sigmoid', input_sahpe=(28*28, ))
+dense2 = keras.layers.Dense(10, activation = 'softmax') #10은 클래스종류의 개수와 같다. 
+
+model = keras.Sequential([dense1, desne2])
+
+model.summary() 이렇게 하면 어떤 층들이 있는지 구경할 수 있다.
+Layer (type)                Output Shape              Param # 
+그냥 이름                (None, N)                     K
+N은 뉴런개수이다.    None은 batchsize (기본32개) 미니배치하강법-(기본으로 32개의 샘플로 나눔.. 위에 배치라고 검색하면 예전에 한거 뜬다.)        K는 가중치와 절편의값이다. y=ax+b에서 b같은애들.
+k의 값은 은닉층의 경우 입력층개수 * 은닉층개수 + 은닉층개수
+            출력층의 경우  은닉층개수 * 출력층개수 + 출력층개수 
+
+Dense를 따로 만들지않고 model생성시기에 바로 넣어서 만들 수도 있다.
+방법1
+model = keras.Sequential([
+                    keras.layers.Dense(100, activation = 'sigmoid', input_shape=(28*28, )),
+                    keras.layers.Dense(10, activation = 'softmax')
+], name='Fashion MNIST Model')
+
+model.summary()
+
+방법2. 이게 가장 많이 사용하는 방법이라고한다.
+model = keras.Sequential()
+model.add(keras.layers.Dense(100, activation = 'sigmoid', input_shape=(28*28, )))
+model.add( keras.layers.Dense(10, activation = 'softmax'))
+model.summary()
+
+모델을 훈련하는 방법
+
+model.compile(loss = 'sparse_categorical_crossentropy', metrics='accuracy')
+
+model.fit(train_scaled, train_target, epochs = 5)
+
+ㅡㅡㅡㅡㅡㅡㅡㅡㅡㅡ
+위에는 은닉층에서 sigmoid를 썼다. 하지만 쟤는 너무 극단적인친구라 relu 함수를 쓰면 학습에 도움이 된다고한다. 
+
+
+(train_input, train_target), (test_input, test_target) = keras.datasets.fashion_mnist.load_data() #returns pairs of train and test set.
+
+train_scaled = train_input / 255.0 
+***미리 1차원배열로 펴주는 작업은 하지않는다!
+train_scaled, val_scaled, train_target, val_target = train_test_split(
+    train_scaled, train_target, test_size=0.2, random_state=42) #split for verification set.
+
+
+model = keras.Sequential()
+model.add(keras.layers.Flatten(input_shape=(28*28))) #이 층을 만들어서 입력층을 1차원배열로 펴주는것을 여기서해준다.
+model.add(keras.layers.Dense(100, activation = 'sigmoid'))
+model.add( keras.layers.Dense(10, activation = 'softmax'))
+model.summary()
+
+옵티마이저
+경사하강법 옵티마이저(SGD, momentum, nesterov)에서 비탈길을 너무 큰걸음으로가면 움푹패인곳도 건너뛰고 다른 오르막길로 가는 그림이있었다. 그래서 천천히 약간씩 내려가는 방법을 취했는데, 굳이 전체적으로 약간씩내려갈 필요없이, 급경사인경우에는 빠르게 내려가고 완만해진다싶으면 조심스레 내려가는 방법이 있을 수 있다. 그것이 적응적학습률 옵티마이저라고한다.(RMSprop, Adam, Adagrad) 정도가있다.
+
+#SGD 경사하강법
+
+model = keras.Sequential()
+model.add(keras.layers.Flatten(input_shape=(28,28))) #이 층을 만들어서 입력층을 1차원배열로 펴주는것을 여기서해준다.
+model.add(keras.layers.Dense(100, activation = 'sigmoid'))
+model.add( keras.layers.Dense(10, activation = 'softmax'))
+model.summary()
+sgd = keras.optimizers.SGD()
+
+# model.compile(optimizer=sgd, loss = 'sparse_categorical_crossentropy', metrics='accuracy')
+
+model.compile(optimizer='sgd', loss = 'sparse_categorical_crossentropy', metrics='accuracy')
+
+
+model.fit(train_scaled, train_target, epochs = 5)
+print('SGD: ',model.evaluate( val_scaled, val_target))
+
+
+#ADAM 적응적학습률 옵티마이저
+
+model = keras.Sequential()
+model.add(keras.layers.Flatten(input_shape=(28,28))) #이 층을 만들어서 입력층을 1차원배열로 펴주는것을 여기서해준다.
+model.add(keras.layers.Dense(100, activation = 'sigmoid'))
+model.add( keras.layers.Dense(10, activation = 'softmax'))
+model.summary()
+sgd = keras.optimizers.SGD()
+
+# model.compile(optimizer=sgd, loss = 'sparse_categorical_crossentropy', metrics='accuracy')
+
+model.compile(optimizer='adam', loss = 'sparse_categorical_crossentropy', metrics='accuracy')
+
+
+model.fit(train_scaled, train_target, epochs = 5)
+print('ADAM',model.evaluate(val_scaled, val_target))
 
 
 
-
- 
+머신러닝과 딥러닝의 차이점은 머신러닝은 앵간하면 엑셀이나 db처럼 데이터가 정형화된 파일을 분류하는데좋고 딥러닝은 이미지같이 그냥 한데 정보가 다 모여져있는거를 특징을 잡아서 다음층에 넘겨주면서 분석할 수 있다.
