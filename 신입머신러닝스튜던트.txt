@@ -1,5 +1,6 @@
 https://colab.research.google.com/?hl=ko 강의링크
-https://github.com/rickiepark/hg-mldl 깃헙정답지
+https://github.com/rickiepark/hg-mldl 
+깃헙정답지
 
 접속 취소하고 
 연결 ->  호스팅된 런타임연결
@@ -1557,3 +1558,222 @@ history = model.fit(train_scaled, train_target, epochs= 5 ,
                     verbose = 0, validation_data =(val_scaled, val_target), callbacks =[checkpoint_cb, early_stopping_cb])
 
 이때 넉넉히 epoch를 적는다. 왜냐면 어짜피 꺾이는지점에서 멈추기때문에 넉넉히 해도된다.
+
+
+26. 이거는 그냥 이론이라 딱히 파일로 할게없음
+합성곱신경망
+2차원이미지는 2차원으로 처리하자!
+
+2차원배열을 1차원으로 만든뒤 0~xth 원소에 배열 W를 곱해서 서로 더한뒤 1개를 출력. 그리고 1+(x+1)th 원소를 더하고곱하고 해서 1개를 출력..하는것을 끝까지해준다.
+합성곱에서는 뉴런=커널=필터=가중치라고말한다.	
+
+그것을 2차원으로 바꾸면 예를들어서
+1 2 3 4
+5 6 7 8 
+9 a b c
+d e f  g 이렇게 생긴게있다고했을때, 3x3만큼묶는다하면 처음에는 1 2 3 5 6 7 9 a b 에 행렬W를 곱해서 서로 더한뒤 1개출력하고, 다음에는 2 3 4 6 7 8 a b c 묶어서 1개출력하고 그담엔 5 6 7 9 a b d e f... 이런식으로 묶는다... 
+
+이때 곱해지는 W를 커널라고 부른다. 그래서 나온 출력값을 특성맵이라고 부른다. 산출할때 relu함수를 애용한다고한다.
+
+합성곱에서는 2차원->2차원 연산을한다. 여러개의 필터를 사용해도 된다고한다.
+
+ex) 4*4 데이터에서 3*3필터를 사용한다면 2*2의 출력값이 3개 나와 특성맵은 (2,2,3)의 형태를 가진다고한다. 항상 마지막 숫자는 필터의 크기라고한다.
+
+위에서는 필터랑 커널이랑 같은말이라고 했지만.. 약간 개념이 달라 적는다. 예를들어 3*3의 크기를 가진 커널이있다고해보자. 그것이 4개면 필터의 개수가 4개라고한다. 
+커널의 크기는 3이지만 커널의 개수는 필터의 개수 = 4이다.
+
+padding이라는것도있다. 예를 들어 2*2 matrix
+a b
+c d 가 있을때 패딩을 둘러친다면
+0 0 0 0
+0 a b 0
+0 c d 0
+0 0 0 0 이런식으로 만들수있다. 하는이유는 역시 커널을 이용한 연산을 더 이용하기위함  -> 특성맵의 크기가 커짐. = 만약 특성맵의 크기가 입력데이터의 크기와 같아진다면 그때 사용한 페딩은 same padding 이라한다. 
+그리고 모서리에 있는 원소들의 기여도를 높일 수 있다. 패딩을 하지않으면 중앙에있는 원소가 더많이쓰여.
+
+stride 스트라이드는  한칸씩이동해서 하는것을 기본으로하지만 직접설정할경우 몇칸씩 건너뛸지를 정할 수 있어.
+
+keras.layers.Conv2D(10, kernel_size=(3,3), activation='relu', padding='same', strides =1)
+
+
+
+
+pooling 풀링: 이것은 커널을 적용해서 나온 특성맵에 또한번 풀링을 적용하여 새로운 특성맵을 만들어내는데 이때 나온 특성맵은 정말 작게 요약할 수 있다. (특성맵의 절반정도)
+평균풀링: 특성맵에서 평균을 내어 특성맵을 만듬. (풀링층의 가중치는없다 그냥 평균냄)
+최대풀링: stride가 2칸이라는 점! 그래서 원소가 1번이상 사용되지않는다. 2*2가 기본크기이고, 그 범위내의 최대값을 뽑아서 최종특성맵을 만든다.
+
+keras.layers.MaxPooling2D(2) #2는 풀링의 크기이다. 보통 2*2이다.
+keras.layers.MaxPooling2D(2, strides =2, padding='valid') 이때 strides랑 padding은 정해주지않아도 기본으로 저렇게설정되있기때문에 그냥 2만써도된다.
+
+합성곱 신경망의 모습
+데이터 ->  n*n커널 * k개 -> (a,a,k) 개의 특성맵 -> 풀링 -> (b,b,k)개의 특성맵 -> 그걸 1차원으로 펼치고 -> [뭐여기 은닉층있어도되고 없어도되고 ] (소프트맥스함수)-> 출력층-> 그걸로 예측ㄷㄷㄷㄷ
+
+여기 위까지는 2d세계에 관한이야기였고 현실에선 3d..
+width, height, depth 가 있는데 depth는 channel이라고부른다. 이때당연히 커널도 3차원인데 커널의 깊이는 데이터의 깊이와 같다. 그래서 둠푹둠푹 찍어내기때문에 특성맵의 크기는 역시 2차원이다. 특성맵의 개수는 역시 커널의 개수와 같다.
+2차원의 흑백이미지는 depth가 1인 3차원배열로 취급해서 처리한다고한다.
+
+27.machineLearning 18 
+
+2차원이미지의 집합인 3차원데이터가 있을경우, 2차원이미지를 3차원으로 만들어준다고했다.
+그러면 (-1,28,28,1)로 해줄수있따. 여기서 28*28은 이미지의 크기이고 마지막에 1이 붙은게 3차원으로 만들어준 깊이다. 제일 처음의 -1은 원래 array의 형식인 (샘플개수, 행, 열)중 모든 샘플개수를 의미한다.
+
+(train_input, train_target), (test_input, test_target) = keras.datasets.fashion_mnist.load_data() #returns pairs of train and test set.
+
+train_scaled = train_input.reshape(-1,28,28,1) / 255.0  #2차원이미지를 3차원으로바꾸기
+train_scaled, val_scaled, train_target, val_target = train_test_split(
+    train_scaled, train_target, test_size=0.2, random_state=42) #split for verification set.
+
+model = keras.Sequential()
+
+#32개의 필터(커널개수), kernal_size=3*3*입력층의 차원크기의 커널. 여기서는 1차원이기때문에 3*3*1이다.
+model.add(keras.layers.Conv2D(32, kernel_size=3, activation='relu', padding='same', input_shape(28.28,1)))
+#이렇게하면 k,k,32 의 특성맵이나오게되는데 32인이유는 필터(커널개수)와 같기때문이다. 여기서 폴링을하기전에 차원은 2k, 2k, 32이다. 폴링은 2이기때문에 깊이(차원)빼고 절반으로한다.
+
+2번째 합성곱층
+#second convolution layer
+			#3,3으로한데는 그냥 명시하고싶어서. 그냥 3으로해도됨.
+model.add(keras.layers.Conv2D(64, kernal_size=(3,3), activation='relu', padding='same'))
+model.add(keras.layers.MaxPooling2D(2))
+
+그러고 심층신경망훈련
+#train Deep Neural Network
+#flatten을 하기위해서는 1차원배열이필요한데, 마지막 풀링을했을때 (7,7,64)의 특성층이만들어진다. 이를 1차원배열로하면 7*7*64 = 3136이만들어진다.
+ 
+model.add(keras.layers.Flatten())
+model.add(keras.layers.Dense(100, activation='relu'))
+model.add(keras.layers.Dropout(0.4))
+model.add(keras.layers.Dense(10, activation='softmax'))
+
+model.add(keras.layers.MaxPooling2D(2))
+
+#이것들로 데이터의 변천사를 알수있다.
+model.summary()
+keras.utils.plot_model(model, show_shapes=True)
+
+
+모델을 컴파일하고 그 손실도와 정확도를 봐봐자
+sparse_categorical_crossntropy를 쓰는이유는 target값들이 정수로 분류가되기때문이다.
+model.compile(optimizer = 'adam', loss='sparse_categorical_crossentropy', metrics='accuracy')
+					//그냥 best-model로해도되는듯..인터넷속도문제.. 그냥 sexy model로해도되는거보니까 모델이름은 주요하지않는듯..
+checkpoint_cb= keras.callbacks.ModelCheckpoint('best-cnn-model.h5')
+early_stopping_cb= keras.callbacks.EarlyStopping(patience= 2, restore_best_weights=True)
+
+history = model.fit(train_scaled, train_target, epochs= 20,
+                    validation_data=(val_scaled, val_target), callbacks=[checkpoint_cb, early_stopping_cb])
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()
+
+
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.legend(['train, val'])
+plt.show()
+
+모델을 평가
+model.evaluate(val_scaled, val_target)
+
+#검증세트의 첫번째 원소가 뭔지를 한번봐보자. imshow할때는 2차원배열이여야한다. val_scaled는 현재 1차원모양이기에 reshape를 해준다.
+
+plt.imshow(val_scaled[0].reshape(28,28), cmap='gray_r')
+plt.show()
+
+
+#예측값들을 보여준다. target(클래스)의 종류가 10개인데, index별로 몇퍼센트의 확률로 예측하고 있는지보여준다. 여기서는 9번째가 1.0000e-00이렇게나오는데 1= 100%확률로 예측했다는소리다.target에서 9는 가방을 의미하는 숫자였다. 
+preds = model.predict(val_scaled[0:1])
+print(preds)
+
+마지막으로 테스트세트를 평가해본다.
+test_scaled = test_input.reshape(-1,28,28,1)/255
+model.evaluate(test_scaled, test_target)
+
+28. machineLeraning19
+합성곱 신경망의 시각화
+
+입력층의 어떤 부분이 필터를 거쳐 높은 가중치로 나오는지 시각화할수있다.
+
+
+!wget https://github.com/rickiepark/hg-mldl/raw/master/best-cnn-model.h5
+
+여기서 best-cnn-model만되는 이유.. !wget으로 뭘불러오는지봐라.. ↑ ㅋㅋ 이미 훈련된 모델을 어디올려놔서 다운받게했는듯. 3*3 크기의 이미지들이 32개 샘플이있나?
+model = keras.models.load_model('best-cnn-model.h5')
+
+model.layers 
+#이걸보면 모델이 어떤 층으로 이루어져있는지보여. 
+#여기서는 Conv2D, 풀링 -> Conv2d, 풀링 -> Flatten -> Dense -> Dropout -> Dense로 학습하고 있어.
+
+conv의 모양을 봐보자.
+print(conv.weights[0].shape, conv.weights[1].shape)
+#(3, 3, 1, 32) (32,)  3*3 의모양의 이미지가 어거지로 3차원으로 만들기위해 1 깊이(차원)이 생겼고 32개의 필터가있나봐.
+
+print(conv_weights) #이걸로 전체영역에 대한 가중치를 볼 수 있고,
+print(conv_weights.mean(), conv_weights.std()) #이걸로 평균과 표준편차를 알수있어.
+
+plt.hist(conv_weights.reshape(-1,1))
+plt.xlabel('weight')
+plt.ylabel('count')
+plt.show()
+이걸로 어떻게 가중치가 편성되있는지 볼 수있는데, 0에가까울 수록 의미없는 가중치이고 음/양의 절대값이 클수록 의미있다는거임.
+여기서 그냥 2차원배열을 hist에 넣는 이유는, 히스토그램은 값의 분포를 나타내는 그래프야. 따라서 [[13 ], [20] ....] 이렇게 쭉있는그래프가 있다면, 가장 작은값이 x축의 가장 작은 값이 되고 가장 큰값이 x축의 가장큰 값이됨. 그 사이에 있는값들이 몇번씩나왔냐에 따라 그 영역의 막대그래프가 올라가. 따라서 y값에는 따로 지정하지않아도되는거지. hist가 알아서 올려줄테니
+
+모델을 훈련하기전의 가중치를 그려보면 가중치가 균등하게 분포되어있는데 경사하강법등 훈련기법을 사용해 훈련을 해주면 가중치가 분산된다. 
+
+어떤 영역에 어떤 가중치가 붙었는지보기. W죠. 네.. 2 row 16 col으로 보기. 커널의 개수가 32기 때문에 i*16+j 로 하나하나씩 띄운다.. conv_weight는 [행,열,깊이, 커널번호]이기때문에..
+fig, axs = plt.subplots(2, 16, figsize=(15,2))
+for i in range(2):
+  for j in range(16):
+    axs[i,j].imshow(conv_weights[:,:,0,i*16+j], vmin=-0.5, vmax= 0.5)
+    #:,: 은 모든 영역이고 0은 첫번째 차원 (어짜피 1차원이므로 0) vmix,vmax는 최댓값과 최솟값을 밝게해준다는거임. 짙은부분이 가중치의 절댓값이 크다는거임. 중요하다는거지.
+    axs[i,j].axis('off')
+
+plt.show()
+
+
+*층별로 결과 분석하기
+
+#이거하면 모델의 입력층이 나타난다.
+print("model input:",model.input)
+
+#입력층에 따른 모델의 첫번째 층의 결과를 반환한다. 
+conv_acti = keras.Model(model.input, model.layers[0].output)
+
+
+inputs = train_input[0:1].reshape(-1,28,28,1)/ 255
+
+feature_maps = conv_acti.predict(inputs)
+print("feature map predict shape",feature_maps.shape)
+#28 * 28 크기의 이미지가 3차원으로 만들어져있고, 커널의 개수는 32개다.
+fig, axs = plt.subplots(4, 8, figsize=(15,8))
+
+for i in range(4):
+    for j in range(8):
+        axs[i, j].imshow(feature_maps[0,:,:,i*8 + j])
+        axs[i, j].axis('off')
+
+plt.show()
+밝은 부분이 감지된 범위래. 그 영역에 가중치를 두는거지. 커널마다 감지하는 영역이 좀달라.
+
+2번째 특성맵 시각화
+	왜 index를 2로 하냐면 0이 cov이고 1은 풀링이자나. 2번쨰가 conv이기떄문에.
+conv2_acti = keras.Model(model.input, model.layers[2].output)
+feature_maps = conv2_acti.predict(inputs)
+print(feature_maps.shape)
+
+fig, axs = plt.subplots(4, 8, figsize=(15,8))
+#(1, 14, 14, 64) 점점 쪼개지고 있어..
+
+for i in range(4):
+    for j in range(8):
+        axs[i, j].imshow(feature_maps[0,:,:,i*8 + j])
+        axs[i, j].axis('off')
+
+plt.show()
+ 
+이러면 뭐가뭔지 알기 힘든 그림이나옴. 그만큼 쓸모없는 정보를 걸러냈다는거지. 밝게빛나는 부분이 인식된 부분이야. 저수준학습으로 돌입함. 추상적임.
+
+29.
