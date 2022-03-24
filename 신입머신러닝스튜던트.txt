@@ -1776,4 +1776,154 @@ plt.show()
  
 이러면 뭐가뭔지 알기 힘든 그림이나옴. 그만큼 쓸모없는 정보를 걸러냈다는거지. 밝게빛나는 부분이 인식된 부분이야. 저수준학습으로 돌입함. 추상적임.
 
-29.
+29. 순차데이터와 순환 신경망을 알아보자.
+순차데이터: 데이터의 순서가 중요하다고 한다.
+ㄴ 텍스트 데이터, 시계열 데이터
+
+순환신경망:
+I am Korean 을 처리할때 I 가 먼저들어가고 처리한다. 다음 am을 처리할때 앞에서 처리했던 I를 다시불러와서 I am을 처리한다. 그리고 마지막으로 Korean을 처리할때 앞에서 처리했던 am을 불러와서 am Korean을 처리한다. 
+하나의 입력을 처리하는 과정을 타임스탭이라고한다.
+이렇게 처리한 결과를 셀(순환층)이라고한다.
+
+여기서 쓰이는 함수는 활성화함수(tanh)인데 이 그래프의 모양이 S라 시그모이드라고 부르는데 로지스틱회귀와는 관련없다고..
+
+타임스탭의 더욱 자세한원래
+입력이 예를 들어 a 이라면 첫번째 타임스탭에서 Wa라는 가중치와 곱해서 h1이라는것을 만든다. 두번째 타임스탭에서 h1을 Wa, Wh라는 가중치와 곱해서 h2를 만든다. 세번째 타임스텝에선 h2를 Wa, Wh라는 가중치와 곱해서 h3을 만든다.. 사용되는 샘플에 따라 가중치가 새로 생긴다. (Wa 하나만있다가 h를 쓰니까 Wa와 Wh를 쓰는걸 보라)
+
+순환신경망의 입력
+아까 예를 다시보자 I am Korean. 여기서 샘플이 1개이기떄문에 (1문장) 타임스탭 첫번째 크기는 1이다. 그리고 단어가 3개이기때문에 두번째 크기는 3이다. 마지막으로 하나의 단어(여기서는 한 단어당 토큰이라 부른다.)마다 3개의 벡터로 처리하자고 정했다면, 타임스탭의 세번째 크기는 3이다.
+즉 이런 방식으로 이 샘플을 순환신경망에 돌린다면 한번의 타임스탭의 크기는 (1,3,3)이 된다.
+
+순환층하나 이상을 사용하면 순환신경망이라고 부른다. 
+순환층이 끝나고 마지막 밀집층에선 출력층에 소프트맥스,활성화함수를 사용하여 예측을 한다.
+
+28. 순환신경망으로 IMDB 리뷰 분류하기..
+영화댓글을 감성분석하기. 
+하나의 문장을 말뭉치라하고 그것을 이루는 단어들을 토큰이라고한다.
+토큰을 종류별로 모두 모아둔것을 어휘사전이라고한다.
+
+이미지를 색을이용해 숫자로 표현하는거맹키로 문장도 단어마다 숫자를 부여하여 전달한다.
+
+from tensorflow.keras.datasets import imdb
+
+#500개만가져와
+(train_input, train_target), (test_input,test_target) = imdb.load_data(
+    num_words= 500
+)
+
+print(train_input.shape, train_target.shape, test_input.shape, test_target.shape)
+#(25000,) (25000,) (25000,) (25000,) 1대1대응인가??
+
+print(train_input[0])
+#[1, 14, 22, 16, 43, 2, 2, 2, 2, 65, 458, 2, 66, 2, 4, 173, 36, 256, 5, 25, 100, ......
+#왜케 기냐면 print(train_input) 해보니까 이거 1차원배열맞는데, 원소가 또 list야.
+#그니까 [list(1,2,4,,5,) , list(12,,15,,16,16,).... 막이렇게 있는거임..
+#문장의 시작 토큰은 1로 지정하는 관례가있따. 어휘사전에 없는단어는 2로 표현하는 관례도 있다..
+
+print(train_target[:20])
+#[1 0 0 1 0 0 1 0 1 0 1 0 0 0 0 0 1 1 0 1]
+
+
+train_input, val_input, train_target, var_target = train_test_split(
+    train_input, train_target, test_size =0.2, random_state = 42
+)
+
+lengths = np.array([len(x) for x in train_input])  
+#아마도 이거 딱봐도 train_input의 원소 x의 length로 이루어진 array구만..
+
+print(np.mean(lengths), np.median(lengths))
+#이걸로 평균값과  중앙값을 본다. 적당한 중앙지점을 찾아서 train_input을 다시 설정하는데, 예를 들어 중앙값이 10이라했는데 문장의 길이가 3이야. 그럼 나머지 7은 0으로 채워지는거임. 
+
+plt.hist(lengths)
+plt.xlabel('length')
+plt.ylabel('frequency')
+plt.show()
+
+시퀀스패딩 : 남은 부분을 0으로 채워주는거
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+train_seq = pad_sequences(train_input, maxlen = 100)
+
+print(train_seq.shape) #(20000, 100).. 아마 list를 그냥 array화시켜서 1list 당 1차원을 배당해, 원래 1차원배열을 2차원배열로만든듯
+
+print(train_seq[0])
+
+print(train_input[0][-10:]) #이거는 train_seq[0]에 마지막 10개의 단어를 반환해줌.
+
+print(train_seq[5]) #문장의 길이가 모자라면 뒷부분에 0을 채우는게아니라 부족한만큼 앞부분에 0을채우고 시작하네..
+
+val_seq = pad_sequences(val_input, maxlen = 100)
+
+#순환 신경망 모델만들기
+model = keras.Sequential()
+#SimpleRNN은 가장기본적인 순환신경망. 100개의 토큰이라 100으로지정함.
+model.add(keras.layers.SimpleRNN(8, input_shape=(100,500)))
+#2진분류니까 Dense가 있다..2진분류면 Flatten을 해줄 필요가없다.. 2진분류니까 뉴런은 1개, 합성함수는 sigmoid로..
+model.add(keras.layers.Dense(1,activation= 'sigmoid'))
+
+원핫인코딩: 배열중 한개의 값만 1이고 나머지는 0이다. 
+train_oh = keras.utils.to_categorical(train_seq)
+print(train_oh.shape) #이걸로 원핫인코딩을 해줄 수 있는데 이것의 값이 (20000,100,500)이다. 여기서 500을 얻었기때문에 SimpleRNN의 input_shape에 2번째 값으로 500을 준거다. 500이 어휘사전의 숫자라고한다.
+
+print(train_oh[0][0][:12])
+
+# print(np.sum(train_oh[0][0])) #obviously 1. beacuse only one element is 1 and others are zeros.
+
+val_oh = keras.utils.to_categorical(val_seq)
+
+원핫인코딩까지했다면 이제 모데을 학습시켜주자.
+
+#옵티마이저는 학습방법을 의미했다. 여기서는 RMS하는듯. 
+rmsprop = keras.optimizers.RMSprop(learning_rate=1e-4)
+#2진분류이기때문에 binary한다. 왜 그러냐면 train_target해보니 0이나 1밖에 답이없다.. 왜이런식으로 해논걸까?
+
+model.compile(optimizer= rmsprop, loss = 'binary_crossentropy', metrics=['accuracy'])
+
+#최적의 모델을 저장, 꺾이는 부분에 스탑
+checkpoint_cb = keras.callbacks.ModelCheckpoint('best-simplernn-model.h5', save_best_only=True)
+early_stopping_cb= keras.callbacks.EarlyStopping(patience= 3, restore_best_weights = True)
+
+#원핫인코딩된 검증데이터를 사용한다. 배치사이즈는 저만큼 원핫훈련세트를 나눠서 테스트해본다는뜻..이었나..
+history = model.fit(train_oh,  train_target, epochs =100, batch_size = 64, validation_data = (val_oh, val_target),
+                    callbacks = [checkpoint_cb, early_stopping_cb])
+
+#그림그리기
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.legend(['train', 'val'])
+plt.show()
+
+원핫인코딩은 길이는 겁내긴데 실속은 1이 하나밖에없어서 좀 비효율적인면이있다. 그래서 임베딩이라는걸해주는데, 이것은 하나만1로 되고 나머지는 0인게아니라 각각의 위치에 실수값이 저장되어 좀 더 의미잇는 배열, 서로 단어마다 관계를 표현할 수 있다.
+
+
+model2 = keras.Sequential()
+  #500은 어휘사전의 개수이고 16은 출력층을 그냥 저걸로 정한거다. 아마 16은 다른걸로 해도 ㄱㅊ을듯
+model2.add(keras.layers.Embedding(500, 16, input_length= 100))
+model2.add(keras.layers.SimpleRNN(8))
+model2.add(keras.layers.Dense(1, activation='sigmoid'))
+
+model2.summary()
+
+rmsprop = keras.optimizers.RMSprop(learning_rate=1e-4)
+model2.compile(optimizer= rmsprop, loss = 'binary_crossentropy', metrics=['accuracy'])
+					#여기서보면 모델이름이 best embedding이네.. 제일 첫 layer의 이름을 따라가는가?
+checkpoint_cb = keras.callbacks.ModelCheckpoint('best-embedding-model.h5', save_best_only=True)
+early_stopping_cb= keras.callbacks.EarlyStopping(patience= 3, restore_best_weights = True)
+
+#주의할점은 아까 원핫인코딩은 배열에 1이랑 0밖에없다했잖아 그문제를 해결하기위해서 임베딩을 하는거니까 seq를 그대로 갖다쓴다. 
+history = model2.fit(train_seq,  train_target, epochs =100, batch_size = 64, validation_data = (val_seq, val_target),
+                    callbacks = [checkpoint_cb, early_stopping_cb])
+
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.legend(['train', 'val'])
+plt.show() 
+
+epoch의 숫자가 줄어든게보인다.
+
+
