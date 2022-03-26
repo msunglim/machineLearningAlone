@@ -1875,7 +1875,7 @@ val_oh = keras.utils.to_categorical(val_seq)
 
 #옵티마이저는 학습방법을 의미했다. 여기서는 RMS하는듯. 
 rmsprop = keras.optimizers.RMSprop(learning_rate=1e-4)
-#2진분류이기때문에 binary한다. 왜 그러냐면 train_target해보니 0이나 1밖에 답이없다.. 왜이런식으로 해논걸까?
+#2진분류이기때문에 binary한다. 왜 그러냐면 train_target해보니 0이나 1밖에 답이없다.. 왜이런식으로 해논걸까? 데이터타겟은 샘플이 긍정인지 부정리뷰인지 2개로 분류하기때문
 
 model.compile(optimizer= rmsprop, loss = 'binary_crossentropy', metrics=['accuracy'])
 
@@ -1927,3 +1927,89 @@ plt.show()
 epoch의 숫자가 줄어든게보인다.
 
 
+29. FINAL!! 
+LSTM과 GRU 셀
+셀은 하나의 데이터셋을 의미.
+
+Long short term memory(LSTM) 이전 샘플의 결과를 기억함
+
+기본적으로 순환신경망이다.
+입력이 들어가서 은닉상태 h라는 결과를 내는데 그 결과를 가지고 또 학습을한다. 그 가중치를 w라하고 그것이 h와 곱해져서 시그모이드 함수를 이용해서 다시 tanh함수에 적용해서 은닉상태 h를 만든다.
+하지만 여기에 셀 상태라는게있다. 이거는 셀안에서만 동작하고 결과로 딱히 나오지는 않는다. 결과는 은닉상태 h이기 때문. 
+무슨 원리냐면 입력이들어올때 가중치 w와 곱해지고 시그모이드함수를 통과해서 셀상태를 통과해서 은닉상태를 만들때 곱해지는 x를 만들고 그것을 이용해 은닉상태 h를 만들고 그 h가 또 순환되는..
+입력과 h에 곱해지는 셀이 2개더있다. 그것은 각각 시그모이드함수랑 tanh가 있는데 그것의 결과값들이 더해져서 지난 이전 타임스탭(순환)의 셀상태와 더해져서 새로운 셀상태의 결과를 만든다. 
+이때 입력에 곱해지는 게이트를 삭제게이트, 입력과 h에 곱해지는 시그모이드와 tanh의 게이트는 입력게이트, 마지막에 h와 곱해지는 셀상태의 결과의 게이트를 출력게이트라고한다.......
+
+from tensorflow.keras.datasets import imdb
+from sklearn.model_selection import train_test_split
+from tensorflow import keras
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+
+#일단 데이터 500개만 불러와
+(train_input, train_target), (test_input, test_target) = imdb.load_data(
+    num_words =500
+)
+
+#검증세트 훈련세트 나누기
+train_input, val_input, train_target, val_target = train_test_split(
+    train_input, train_target, test_size = 0.2, random_state = 42
+)
+
+#시퀀스패딩 : 남은 부분을 0으로 채워주는거.. ㅇㅇ 원핫인코딩이랑 다름! 이거는 그냥 길이를 통일시키고 앞에서부터 모자란부분을 0으로 채워주는거임.. 만약 I love you에서 길이가 5로 통일되었다하면 [0, 0, 1, 12, 44] 이런식으로 저장
+train_seq = pad_sequences(train_input, maxlen=100)
+val_seq = pad_sequences(val_input, maxlen=100)
+
+#모델만들기
+model = keras.Sequential()
+
+#임베딩을 사용한다 (0~1사이의 실수로 단어를 저장)
+model.add(keras.layers.Embedding(500, 16, input_length = 100))
+
+model.add(keras.layers.LSTM(8))
+model.add(keras.layers.Dense(1, activation='sigmoid'))
+
+model.summary()
+
+
+rmsprops = keras.optimizers.RMSprop(learning_rate=1e-4)
+#왜 이진분류냐면 이거는 데이터샘플이 긍정인지 부정리뷰인지만 데이터로 남아있기때문.
+model.compile(optimizer= rmsprops, loss='binary_crossentropy', metrics='accuracy')
+
+checkpoint_cb = keras.callbacks.ModelCheckpoint('best-lstm-model.h5', save_best_only=True)
+early_stopping_cb = keras.callbacks.EarlyStopping(patience= 3, restore_best_weights=True)
+
+history = model.fit(train_seq, train_target, epochs=100, batch_size=64,
+                    validation_data = (val_seq, val_target),
+                    callbacks=[checkpoint_cb, early_stopping_cb])
+
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.legend(['train','val'])
+plt.xlabel('epoch')
+plt.ylabel('loss')
+plt.show()
+
+
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.legend(['train','val'])
+plt.xlabel('epoch')
+plt.ylabel('accuracy')
+plt.show()
+
+LSTM을 사용한결과가 SimpleRNN 섯을때보다 검증세트에서 손실값이 낮았다..
+드롭아웃을 지정해줄 수도 잇따. 드롭아웃을 적용하면 검증세트와 훈련세트의 손실도차이가 줄어든다.
+
+model.add(keras.layers.LSTM(8, dropout= 0.3)) 이렇게 지정가능
+
+2개 이상의 층을 연결하기
+#마지막 LSTM층을 제외한 다른 애들은 return_sequence로 은닉상태를 출력해줘야한다.  
+model.add(keras.layers.LSTM(8, dropout= 0.3, return_sequences=True)) 
+model.add(keras.layers.LSTM(8, dropout= 0.3, return_sequences=True))
+...
+model.add(keras.layers.LSTM(8, dropout= 0.3))  #마지막은 면제!
+이러면 과대적합이 줄어든다.
+
+GRU 셀엔 셀상태가없다.
+이번엔 h를 1에서 뺀뒤 이전은닉상태와 곱해지고 시그모이드를 쓰고 어쩌구해서 출력한다고한다..
+model.add(keras.layers.GRU(8)) LSTM빼고 이거만해주면됨
